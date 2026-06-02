@@ -61,13 +61,72 @@ export default function Dashboard({
     setDragOverTaskId(null);
   };
 
+  const handleExport = () => {
+    const dataStr = JSON.stringify(tasks, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `notepad-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedTasks = JSON.parse(event.target.result);
+        if (Array.isArray(importedTasks)) {
+          const newTasks = [...tasks];
+          importedTasks.forEach(importedTask => {
+            const existingIndex = newTasks.findIndex(t => t.id === importedTask.id);
+            if (existingIndex >= 0) {
+              newTasks[existingIndex] = importedTask;
+            } else {
+              newTasks.push(importedTask);
+            }
+          });
+          setTasks(newTasks);
+          alert("Notes imported successfully!");
+        } else {
+          alert("Invalid file format. Expected an array of notes.");
+        }
+      } catch (err) {
+        alert("Error reading the file. Make sure it is a valid JSON backup.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = null; // Reset input
+  };
+
   return (
     <div className="full-page">
       <div className="page-header">
         <h2>🚀 My Dashboard</h2>
-        <button className="btn btn-primary" onClick={onCreateTask}>
-          + Create Note
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button className="btn btn-secondary btn-sm-mobile" onClick={handleExport} title="Download notes as a file">
+            📥 <span className="hide-mobile">Export</span>
+          </button>
+          <label className="btn btn-secondary btn-sm-mobile" title="Upload a notes file" style={{ margin: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+            📤 <span className="hide-mobile">Import</span>
+            <input 
+              type="file" 
+              accept=".json" 
+              style={{ display: "none" }} 
+              onChange={handleImport} 
+            />
+          </label>
+          <button className="btn btn-primary btn-sm-mobile" onClick={onCreateTask}>
+            + <span className="hide-mobile">Create Note</span><span className="show-mobile">Note</span>
+          </button>
+        </div>
       </div>
       <div className="page-content">
 
